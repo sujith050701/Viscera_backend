@@ -8,7 +8,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.4",
     "nodemailer": "^6.9.16",
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.7",
+    "twilio": "^5.4.0"
   },
   "name": "otp_backend",
   "version": "1.0.0",

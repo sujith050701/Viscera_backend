@@ -1,4 +1,16 @@
+
 const Appointment = require("../model/appointment_schema");
+
+const twilio = require('twilio');
+
+// Twilio configuration
+const accountSid = 'ACfdb846fd6773bd3df58d640adf8e9873'; // Replace with your Twilio Account SID
+const authToken = 'ebd3ba39c2b1293f41d76fbbf85a2acc';  // Replace with your Twilio Auth Token
+const twilioWhatsAppNumber = 'whatsapp:+14155238886';
+// Replace with your Twilio WhatsApp number
+
+// Initialize Twilio client
+const client = twilio(accountSid, authToken);
 
 // Path to your Appointment model
 const User = require('../model/user_schema');  // Path to your User model
@@ -69,6 +81,7 @@ exports.createAppointment = async (req, res) => {
     // Extract user_id from the authenticated user
     const user_id = req.user.id; // `req.user` is set by the `authenticate` middleware
     const { mobile, service, practitioner, branch, name, email, date } = req.body;
+
     // Add email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -118,14 +131,6 @@ exports.createAppointment = async (req, res) => {
     // Debug log to check user ID
     console.log('Authenticated user ID:', user_id);
 
-    // Validate input fields
-    if (!mobile || !service || !practitioner || !branch || !name || !email || !date) {
-      return res.status(400).send({
-        success: false,
-        message: "All fields are required"
-      });
-    }
-
     // Create the appointment
     const appointment = await Appointment.create({
       user_id,
@@ -135,13 +140,36 @@ exports.createAppointment = async (req, res) => {
       branch,
       name,
       email,
-      date:formattedDate,
+      date: formattedDate,
       status: "scheduled",
     });
 
+    // Send WhatsApp message using Twilio
+    // Send WhatsApp message using Twilio
+    const whatsappMessage = `Hello ${name}, your appointment for ${service} has been successfully booked for ${formattedDate}. Thank you!`;
+
+    try {
+      await client.messages.create({
+        from: twilioWhatsAppNumber, // Corrected 'from' field
+        to: `whatsapp:+91${mobile}`, // Corrected 'to' field
+        body: whatsappMessage,
+      });
+      console.log('WhatsApp message sent successfully');
+    } catch (twilioError) {
+      console.error('Error sending WhatsApp message:', twilioError);
+      // Log error for debugging
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send WhatsApp notification',
+        error: twilioError.message,
+      });
+    }
+
+
+
     res.status(201).json({
       success: true,
-      message: 'Appointment created successfully.',
+      message: 'Appointment created successfully and WhatsApp message sent.',
       data: appointment,
     });
   } catch (error) {
@@ -153,8 +181,6 @@ exports.createAppointment = async (req, res) => {
     });
   }
 };
-
-
 
 
 exports.deleteAllAppointment = async (req, res) => {
