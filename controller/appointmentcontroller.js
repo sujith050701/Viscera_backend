@@ -1,4 +1,3 @@
-
 const Appointment = require("../model/appointment_schema");
 
 const twilio = require('twilio');
@@ -186,6 +185,76 @@ exports.deleteAppointment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'An error occurred while deleting the appointment',
+      error: error.message,
+    });
+  }
+};
+
+exports.updateAppointment = async (req, res) => {
+  try {
+    
+   
+
+    const appointmentId = req.params._id;
+    console.log(appointmentId); // Correctly access `id` from the URL
+    const { mobile, service, practitioner, branch, name, email, date } = req.body;
+
+    // Validate required fields
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
+    }
+
+    // Validate mobile number format
+    const mobileRegex = /^\d{10}$/;
+    if (mobile && !mobileRegex.test(mobile)) {
+      return res.status(400).json({ success: false, message: 'Invalid mobile number' });
+    }
+
+    // Validate and format date
+    const [year, month, day] = date.split('-');
+    const appointmentDate = new Date(year, month - 1, day);
+    if (isNaN(appointmentDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid date' });
+    }
+
+    // Normalize the date to YYYY-MM-DD format
+    const formattedDate = `${appointmentDate.getFullYear()}-${String(appointmentDate.getMonth() + 1).padStart(2, '0')}-${String(appointmentDate.getDate()).padStart(2, '0')}`;
+
+    // Update appointment in the database
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      {
+        mobile,
+        service,
+        practitioner,
+        branch,
+        name,
+        email,
+        date: formattedDate,
+      },
+      { new: true } // Return updated document
+    );
+
+    if (!updatedAppointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Appointment updated successfully',
+      data: updatedAppointment,
+    });
+  } catch (error) {
+    console.error('Error updating appointment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while updating the appointment',
       error: error.message,
     });
   }

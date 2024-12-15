@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const {createAppointment,getAppointment,getAppointmentsByUserId,deleteAppointment,deleteAllAppointment} = require("../controller/appointmentcontroller"); // Check exports here
+const {createAppointment,getAppointment,getAppointmentsByUserId,deleteAppointment,deleteAllAppointment,updateAppointment} = require("../controller/appointmentcontroller"); // Check exports here
 const { authenticate } = require("../middleware/authmiddleware"); 
 
-router.get("/get",  getAppointment); // Ensure getAppointments is defined
+router.get("/get",  getAppointment); 
+router.put("/update/:_id",updateAppointment);// Ensure getAppointments is defined
 
 // ... existing code ...
 

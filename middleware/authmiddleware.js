@@ -14,7 +14,7 @@ exports.authenticate = (req, res, next) => {
     // Ensure that the user ID is present in the decoded token
     if (!req.user.id) {
       return res.status(401).send({ message: "User ID is missing in the token." });
-    }
+    } 
     next();
   } catch (error) {
     res.status(401).send({ message: "Invalid or expired token." });
