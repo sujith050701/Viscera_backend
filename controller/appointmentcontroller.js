@@ -75,63 +75,34 @@ exports.getAppointmentsByUserId = async (req, res) => {
 };
 
 
-
 exports.createAppointment = async (req, res) => {
   try {
-    // Extract user_id from the authenticated user
-    const user_id = req.user.id; // `req.user` is set by the `authenticate` middleware
+    const user_id = req.user.id; // User ID from the token
     const { mobile, service, practitioner, branch, name, email, date } = req.body;
 
-    // Add email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid email format. Please provide a valid email address.',
-      });
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
 
-    // Validate required fields
-    if (!service || !name || !email || !mobile || !date) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields. Please provide all necessary information.',
-      });
-    }
-
-    // Validate mobile number format (assuming a 10-digit number)
     const mobileRegex = /^\d{10}$/;
     if (!mobileRegex.test(mobile)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid mobile number format. Please provide a valid 10-digit number.',
-      });
+      return res.status(400).json({ success: false, message: 'Invalid mobile number' });
     }
 
-    // Validate date format and ensure it is not in the past
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to midnight
+    today.setHours(0, 0, 0, 0);
 
-    // Parse the date string (expecting DD-MM-YYYY format)
     const [day, month, year] = date.split('-');
-
-    // Create the Date object with the correct order (year, month-1, day)
     const appointmentDate = new Date(year, month - 1, day);
 
     if (isNaN(appointmentDate.getTime()) || appointmentDate < today) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid date. Please provide a future date in DD-MM-YYYY format.',
-      });
+      return res.status(400).json({ success: false, message: 'Invalid date' });
     }
 
-    // Format the date to YYYY-MM-DD for consistent storage
-    const formattedDate = appointmentDate.toISOString().split('T')[0];
+    // Normalize the date to YYYY-MM-DD format
+    const formattedDate = `${appointmentDate.getFullYear()}-${String(appointmentDate.getMonth() + 1).padStart(2, '0')}-${String(appointmentDate.getDate()).padStart(2, '0')}`;
 
-    // Debug log to check user ID
-    console.log('Authenticated user ID:', user_id);
-
-    // Create the appointment
     const appointment = await Appointment.create({
       user_id,
       mobile,
@@ -144,41 +115,26 @@ exports.createAppointment = async (req, res) => {
       status: "scheduled",
     });
 
-    // Send WhatsApp message using Twilio
-    // Send WhatsApp message using Twilio
     const whatsappMessage = `Hello ${name}, your appointment for ${service} has been successfully booked for ${formattedDate}. Thank you!`;
 
     try {
       await client.messages.create({
-        from: twilioWhatsAppNumber, // Corrected 'from' field
-        to: `whatsapp:+91${mobile}`, // Corrected 'to' field
+        from: twilioWhatsAppNumber,
+        to: `whatsapp:+91${mobile}`,
         body: whatsappMessage,
       });
-      console.log('WhatsApp message sent successfully');
     } catch (twilioError) {
       console.error('Error sending WhatsApp message:', twilioError);
-      // Log error for debugging
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send WhatsApp notification',
-        error: twilioError.message,
-      });
     }
-
-
 
     res.status(201).json({
       success: true,
-      message: 'Appointment created successfully and WhatsApp message sent.',
+      message: 'Appointment created successfully',
       data: appointment,
     });
   } catch (error) {
     console.error('Appointment creation error:', error);
-    res.status(500).send({
-      success: false,
-      message: "Error scheduling appointment",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: 'Error scheduling appointment', error: error.message });
   }
 };
 
